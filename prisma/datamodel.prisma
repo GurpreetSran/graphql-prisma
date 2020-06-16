@@ -19,3 +19,4 @@ type Comment {
   author: User!
   post: Post!
 }
+
