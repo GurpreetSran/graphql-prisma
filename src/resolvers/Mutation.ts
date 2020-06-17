@@ -1,115 +1,128 @@
+import prisma from '../prisma';
+import { Prisma } from 'prisma-binding';
+
 enum mutations {
   CREATED,
   UPDATED,
   DELETED,
 }
 
-import { v1 } from 'uuid';
-import db from '../db';
-
 const Mutation = {
-  createUser(
+  async createUser(
     _parent: undefined,
-    args: { data: { name: string } },
-    ctx: { db: typeof db }
+    args: { data: { email: string; name: string } },
+    ctx: { prisma: any },
+    info: any
   ) {
-    const newUser = {
-      id: v1(),
-      ...args.data,
-    };
-    ctx.db.users.push(newUser);
-    return newUser;
-  },
-  deleteUser(_parent: undefined, args: { id: string }, ctx: { db: typeof db }) {
-    const userIndex = ctx.db.users.findIndex((user) => user.id === args.id);
+    const { prisma } = ctx;
+    const emailTaken = await prisma.exists.User({ email: args.data.email });
 
-    if (userIndex === -1) {
-      throw new Error('User not found');
+    if (emailTaken) {
+      throw new Error('Email taken');
     }
 
-    const deletedUser = ctx.db.users.splice(userIndex, 1);
-
-    ctx.db.posts = ctx.db.posts.filter((post) => {
-      const match = post.author === args.id;
-
-      if (match) {
-        ctx.db.comments = ctx.db.comments.filter(
-          (comments) => comments.post !== post.id
-        );
-      }
-
-      return !match;
-    });
-
-    ctx.db.comments = ctx.db.comments.filter(
-      (comment) => comment.author !== args.id
+    return prisma.mutation.createUser(
+      {
+        data: args.data,
+      },
+      info
     );
-
-    return deletedUser[0];
+  },
+  deleteUser(
+    _parent: undefined,
+    args: { id: string },
+    { prisma }: { prisma: Prisma }
+  ) {
+    return prisma.mutation.deleteUser({
+      where: {
+        id: args.id,
+      },
+    });
+  },
+  updateUser(
+    _parent: undefined,
+    args: any,
+    { prisma }: { prisma: Prisma },
+    info: any
+  ) {
+    return prisma.mutation.updateUser(
+      {
+        where: {
+          id: args.id,
+        },
+        data: args.data,
+      },
+      info
+    );
   },
   createPost(
     _parent: undefined,
-    args: { data: { title: string; author: string } },
-    ctx: { db: typeof db; pubSub: any }
+    args: any,
+    { prisma }: { prisma: Prisma },
+    info: any
   ) {
-    const newPost = {
-      id: v1(),
-      ...args.data,
-    };
-    ctx.pubSub.publish('post', {
-      post: {
-        mutation: mutations.CREATED,
-        data: newPost,
+    return prisma.mutation.createPost(
+      {
+        data: {
+          title: args.data.title,
+          body: args.data.body,
+          published: true,
+          author: {
+            connect: {
+              id: args.data.author,
+            },
+          },
+        },
       },
-    });
-    ctx.db.posts.push(newPost);
-    return newPost;
-  },
-  deletePost(_parent: undefined, args: { id: string }, ctx: { db: typeof db }) {
-    const postIndex = ctx.db.posts.findIndex((post) => post.id === args.id);
-
-    if (postIndex === -1) {
-      throw new Error('Post not found');
-    }
-
-    const deletedPost = ctx.db.posts.splice(postIndex, 1);
-
-    ctx.db.comments = ctx.db.comments.filter(
-      (comment) => comment.post !== args.id
+      info
     );
-
-    return deletedPost[0];
-  },
-  createComment(_parent: undefined, args: any, ctx: any) {
-    const newComment = {
-      id: v1(),
-      text: args.data.text,
-      author: args.data.author,
-      post: args.data.post,
-    };
-
-    ctx.db.comments.push(newComment);
-    ctx.pubSub.publish(`comment ${args.data.post}`, { comment: newComment });
-    return newComment;
   },
 
-  deleteComment(
-    _parent: undefined,
-    args: { id: string },
-    ctx: { db: typeof db }
-  ) {
-    const commentIndex = ctx.db.comments.findIndex(
-      (comment) => comment.id === args.id
-    );
+  // deletePost(_parent: undefined, args: { id: string }, ctx: { db: typeof db }) {
+  //   const postIndex = ctx.db.posts.findIndex((post) => post.id === args.id);
 
-    if (commentIndex === -1) {
-      throw new Error('Post not found');
-    }
+  //   if (postIndex === -1) {
+  //     throw new Error('Post not found');
+  //   }
 
-    const deletedComment = ctx.db.comments.splice(commentIndex, 1);
+  //   const deletedPost = ctx.db.posts.splice(postIndex, 1);
 
-    return deletedComment[0];
-  },
+  //   ctx.db.comments = ctx.db.comments.filter(
+  //     (comment) => comment.post !== args.id
+  //   );
+
+  //   return deletedPost[0];
+  // },
+  // createComment(_parent: undefined, args: any, ctx: any) {
+  //   const newComment = {
+  //     id: v1(),
+  //     text: args.data.text,
+  //     author: args.data.author,
+  //     post: args.data.post,
+  //   };
+
+  //   ctx.db.comments.push(newComment);
+  //   ctx.pubSub.publish(`comment ${args.data.post}`, { comment: newComment });
+  //   return newComment;
+  // },
+
+  // deleteComment(
+  //   _parent: undefined,
+  //   args: { id: string },
+  //   ctx: { db: typeof db }
+  // ) {
+  //   const commentIndex = ctx.db.comments.findIndex(
+  //     (comment) => comment.id === args.id
+  //   );
+
+  //   if (commentIndex === -1) {
+  //     throw new Error('Post not found');
+  //   }
+
+  //   const deletedComment = ctx.db.comments.splice(commentIndex, 1);
+
+  //   return deletedComment[0];
+  // },
 };
 
 export default Mutation;

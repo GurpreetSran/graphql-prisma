@@ -6,9 +6,7 @@ import User from './resolvers/User';
 import Post from './resolvers/Post';
 import Comment from './resolvers/Comment';
 import Subscription from './resolvers/Subscription';
-import './prisma';
-// import { Resolver, Query } from 'type-graphql';
-// Todo - implement this in typescript decorators
+import prisma from './prisma';
 
 const pubSub = new PubSub();
 
@@ -25,6 +23,7 @@ const server = new GraphQLServer({
   context: {
     db,
     pubSub,
+    prisma,
   },
 });
 
