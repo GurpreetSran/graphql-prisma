@@ -78,51 +78,49 @@ const Mutation = {
     );
   },
 
-  // deletePost(_parent: undefined, args: { id: string }, ctx: { db: typeof db }) {
-  //   const postIndex = ctx.db.posts.findIndex((post) => post.id === args.id);
+  deletePost(
+    _parent: undefined,
+    args: { id: string },
+    ctx: { prisma: Prisma }
+  ) {
+    return ctx.prisma.mutation.deletePost({
+      where: {
+        id: args.id,
+      },
+    });
+  },
+  createComment(_parent: undefined, args: any, ctx: any, info: any) {
+    return ctx.prisma.mutation.createComment(
+      {
+        data: {
+          text: args.data.text,
+          author: {
+            connect: {
+              id: args.data.author,
+            },
+          },
+          post: {
+            connect: {
+              id: args.data.post,
+            },
+          },
+        },
+      },
+      info
+    );
+  },
 
-  //   if (postIndex === -1) {
-  //     throw new Error('Post not found');
-  //   }
-
-  //   const deletedPost = ctx.db.posts.splice(postIndex, 1);
-
-  //   ctx.db.comments = ctx.db.comments.filter(
-  //     (comment) => comment.post !== args.id
-  //   );
-
-  //   return deletedPost[0];
-  // },
-  // createComment(_parent: undefined, args: any, ctx: any) {
-  //   const newComment = {
-  //     id: v1(),
-  //     text: args.data.text,
-  //     author: args.data.author,
-  //     post: args.data.post,
-  //   };
-
-  //   ctx.db.comments.push(newComment);
-  //   ctx.pubSub.publish(`comment ${args.data.post}`, { comment: newComment });
-  //   return newComment;
-  // },
-
-  // deleteComment(
-  //   _parent: undefined,
-  //   args: { id: string },
-  //   ctx: { db: typeof db }
-  // ) {
-  //   const commentIndex = ctx.db.comments.findIndex(
-  //     (comment) => comment.id === args.id
-  //   );
-
-  //   if (commentIndex === -1) {
-  //     throw new Error('Post not found');
-  //   }
-
-  //   const deletedComment = ctx.db.comments.splice(commentIndex, 1);
-
-  //   return deletedComment[0];
-  // },
+  deleteComment(
+    _parent: undefined,
+    args: { id: string },
+    ctx: { prisma: Prisma }
+  ) {
+    return ctx.prisma.mutation.deleteComment({
+      where: {
+        id: args.id,
+      },
+    });
+  },
 };
 
 export default Mutation;
