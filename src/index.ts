@@ -1,5 +1,4 @@
-import { GraphQLServer, PubSub } from 'graphql-yoga';
-import db from './db';
+import { GraphQLServer } from 'graphql-yoga';
 import Query from './resolvers/Query';
 import Mutation from './resolvers/Mutation';
 import User from './resolvers/User';
@@ -7,8 +6,7 @@ import Post from './resolvers/Post';
 import Comment from './resolvers/Comment';
 import Subscription from './resolvers/Subscription';
 import prisma from './prisma';
-
-const pubSub = new PubSub();
+import { ContextParameters } from 'graphql-yoga/dist/types';
 
 const server = new GraphQLServer({
   typeDefs: './src/schema.graphql',
@@ -20,10 +18,11 @@ const server = new GraphQLServer({
     Post,
     Comment,
   },
-  context: {
-    db,
-    pubSub,
-    prisma,
+  context(req: ContextParameters) {
+    return {
+      prisma,
+      req,
+    };
   },
 });
 

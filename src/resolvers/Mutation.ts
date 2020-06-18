@@ -1,5 +1,9 @@
-import prisma from '../prisma';
 import { Prisma } from 'prisma-binding';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+
+import getUserId from '../utils/getUserId';
+import { ContextParameters } from 'graphql-yoga/dist/types';
 
 enum mutations {
   CREATED,
@@ -8,12 +12,47 @@ enum mutations {
 }
 
 const Mutation = {
-  async createUser(
+  async login(
     _parent: undefined,
-    args: { data: { email: string; name: string } },
-    ctx: { prisma: any },
+    args: { email: string; password: string },
+    ctx: { prisma: Prisma },
     info: any
   ) {
+    const user = await ctx.prisma.query.user({
+      where: {
+        email: args.email,
+      },
+    });
+
+    if (!user) {
+      throw new Error('Unable to login');
+    }
+
+    const isMatch = await bcrypt.compare(args.password, user.password);
+
+    if (!isMatch) {
+      throw new Error('Unable to login');
+    }
+
+    return {
+      user,
+      token: jwt.sign({ userid: user.id }, 'thisisasecret'),
+    };
+  },
+  async createUser(
+    _parent: undefined,
+    args: { data: { email: string; name: string; password: string } },
+    ctx: { prisma: Prisma },
+    info: any
+  ) {
+    const { password } = args.data;
+
+    if (password.length < 8) {
+      throw new Error('Password must be 8 chars long');
+    }
+
+    const encryptedPassword = await bcrypt.hash(password, 10);
+
     const { prisma } = ctx;
     const emailTaken = await prisma.exists.User({ email: args.data.email });
 
@@ -21,34 +60,43 @@ const Mutation = {
       throw new Error('Email taken');
     }
 
-    return prisma.mutation.createUser(
-      {
-        data: args.data,
+    const user = await prisma.mutation.createUser({
+      data: {
+        ...args.data,
+        password: encryptedPassword,
       },
-      info
-    );
+    });
+
+    return {
+      user,
+      token: jwt.sign({ userid: user.id }, 'thisisasecret'),
+    };
   },
   deleteUser(
     _parent: undefined,
     args: { id: string },
-    { prisma }: { prisma: Prisma }
+    { prisma, req }: { prisma: Prisma; req: ContextParameters }
   ) {
+    const userId = getUserId(req);
+
     return prisma.mutation.deleteUser({
       where: {
-        id: args.id,
+        id: userId,
       },
     });
   },
   updateUser(
     _parent: undefined,
     args: any,
-    { prisma }: { prisma: Prisma },
+    { prisma, req }: { prisma: Prisma; req: ContextParameters },
     info: any
   ) {
+    const userId = getUserId(req);
+
     return prisma.mutation.updateUser(
       {
         where: {
-          id: args.id,
+          id: userId,
         },
         data: args.data,
       },
@@ -58,9 +106,11 @@ const Mutation = {
   createPost(
     _parent: undefined,
     args: any,
-    { prisma }: { prisma: Prisma },
+    { prisma, req }: { prisma: Prisma; req: ContextParameters },
     info: any
   ) {
+    const userId = getUserId(req);
+
     return prisma.mutation.createPost(
       {
         data: {
@@ -69,7 +119,7 @@ const Mutation = {
           published: true,
           author: {
             connect: {
-              id: args.data.author,
+              id: userId,
             },
           },
         },
@@ -77,12 +127,24 @@ const Mutation = {
       info
     );
   },
-
-  deletePost(
+  async deletePost(
     _parent: undefined,
     args: { id: string },
-    ctx: { prisma: Prisma }
+    ctx: { prisma: Prisma; req: ContextParameters }
   ) {
+    const userId = getUserId(ctx.req);
+
+    const postExists = await ctx.prisma.exists.Post({
+      id: args.id,
+      author: {
+        id: userId,
+      },
+    });
+
+    if (!postExists) {
+      throw new Error('Unable to delete post');
+    }
+
     return ctx.prisma.mutation.deletePost({
       where: {
         id: args.id,
