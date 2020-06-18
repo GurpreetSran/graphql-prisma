@@ -1,20 +1,25 @@
-import db from '../db';
+import { Prisma } from 'prisma-binding';
 
 const Subscription = {
   comment: {
     subscribe(
       _parent: undefined,
       { postId }: { postId: string },
-      ctx: { db: typeof db; pubSub: any },
-      _info: any
+      ctx: { prisma: Prisma },
+      info: any
     ) {
-      const post = ctx.db.posts.find((post) => post.id === postId);
-
-      if (!post) {
-        throw new Error('Post not found');
-      }
-
-      return ctx.pubSub.asyncIterator(`comment ${postId}`);
+      return ctx.prisma.subscription.comment(
+        {
+          where: {
+            node: {
+              post: {
+                id: postId,
+              },
+            },
+          },
+        },
+        info
+      );
     },
   },
 
@@ -22,10 +27,19 @@ const Subscription = {
     subscribe(
       _parent: undefined,
       _args: undefined,
-      ctx: { db: typeof db; pubSub: any },
-      _info: any
+      ctx: { prisma: Prisma },
+      info: any
     ) {
-      return ctx.pubSub.asyncIterator('post');
+      return ctx.prisma.subscription.post(
+        {
+          where: {
+            node: {
+              published: true,
+            },
+          },
+        },
+        info
+      );
     },
   },
 };
