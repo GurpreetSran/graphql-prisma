@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 
 import getUserId from '../utils/getUserId';
 import { ContextParameters } from 'graphql-yoga/dist/types';
+import prisma from '../prisma';
 
 enum mutations {
   CREATED,
@@ -152,13 +153,15 @@ const Mutation = {
     });
   },
   createComment(_parent: undefined, args: any, ctx: any, info: any) {
+    const userId = getUserId(ctx.req);
+
     return ctx.prisma.mutation.createComment(
       {
         data: {
           text: args.data.text,
           author: {
             connect: {
-              id: args.data.author,
+              id: userId,
             },
           },
           post: {
@@ -172,11 +175,24 @@ const Mutation = {
     );
   },
 
-  deleteComment(
+  async deleteComment(
     _parent: undefined,
     args: { id: string },
-    ctx: { prisma: Prisma }
+    ctx: { req: ContextParameters; prisma: Prisma }
   ) {
+    const userId = getUserId(ctx.req);
+
+    const isOwner = await prisma.exists.Comment({
+      id: args.id,
+      author: {
+        id: userId,
+      },
+    });
+
+    if (!isOwner) {
+      throw new Error('Unable to delete comment');
+    }
+
     return ctx.prisma.mutation.deleteComment({
       where: {
         id: args.id,
