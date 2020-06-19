@@ -1,7 +1,14 @@
+# import UserOrderByInput from './generated/prisma.graphql'
+
 type Query {
   add(numbers: [Int!]!): Int!
   greeting(name: String): String!
-  users(query: String): [User!]!
+  users(
+    query: String
+    first: Int
+    skip: Int
+    orderBy: UserOrderByInput
+  ): [User!]!
   posts(query: String): [Post!]!
   comments: [Comment!]!
   post(id: ID!): Post!
@@ -47,7 +54,9 @@ type User {
   email: String
   password: String!
   posts: [Post!]!
-  comments: [Comment!]!
+  comments: [Comment]
+  updatedAt: String!
+  createdAt: String!
 }
 
 type AuthPayload {

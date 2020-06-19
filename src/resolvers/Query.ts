@@ -2,17 +2,16 @@ import getUserId from '../utils/getUserId';
 import prisma from '../prisma';
 
 const Query = {
-  users(
-    _parent: undefined,
-    args: { query: String },
-    ctx: { prisma: any },
-    info: any
-  ) {
-    const opArgs: any = {};
+  users(_parent: undefined, args: any, ctx: { prisma: any }, info: any) {
+    const opArgs: any = {
+      first: args.first,
+      skip: args.skip,
+      orderBy: args.orderBy,
+    };
 
     if (args.query) {
       opArgs.where = {
-        OR: [{ name_contains: args.query }, { email_contains: args.query }],
+        OR: [{ name_contains: args.query }],
       };
     }
 

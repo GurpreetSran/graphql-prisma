@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import getUserId from '../utils/getUserId';
 import { ContextParameters } from 'graphql-yoga/dist/types';
 import prisma from '../prisma';
+import getToken from '../utils/generateToken';
 
 enum mutations {
   CREATED,
@@ -37,7 +38,7 @@ const Mutation = {
 
     return {
       user,
-      token: jwt.sign({ userid: user.id }, 'thisisasecret'),
+      token: getToken(user.id),
     };
   },
   async createUser(
@@ -70,7 +71,7 @@ const Mutation = {
 
     return {
       user,
-      token: jwt.sign({ userid: user.id }, 'thisisasecret'),
+      token: getToken(user.id),
     };
   },
   deleteUser(
@@ -152,7 +153,16 @@ const Mutation = {
       },
     });
   },
-  createComment(_parent: undefined, args: any, ctx: any, info: any) {
+  async createComment(_parent: undefined, args: any, ctx: any, info: any) {
+    const isPostPublished = await ctx.prisma.exists.Post({
+      id: args.data.post,
+      published: true,
+    });
+
+    if (!isPostPublished) {
+      throw new Error('Post not published');
+    }
+
     const userId = getUserId(ctx.req);
 
     return ctx.prisma.mutation.createComment(
