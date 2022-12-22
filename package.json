@@ -18,7 +18,7 @@
     "bcrypt": "^5.0.0",
     "concurrently": "^5.2.0",
     "graphql-yoga": "^1.18.3",
-    "jsonwebtoken": "^8.5.1",
+    "jsonwebtoken": "^9.0.0",
     "nodemon": "^2.0.4",
     "prisma-binding": "^2.3.16",
     "type-graphql": "^1.0.0-rc.2",
